@@ -101,6 +101,7 @@ export function scorePr(filesCover: FilesCoverage, publishType: PublishType = 'g
   message = message.concat(`\n\n\n> **updated for commit: \`${sha}\` by ${action}🐍**`)
   message = `\n> current status: ${passOverall ? '✅' : '❌'}`.concat(message)
 
+  core.info(`Publishing results as ${publishType}...`)
   switch (publishType) {
     case 'github-comment':
       publishMessage(context.issue.number, message)
