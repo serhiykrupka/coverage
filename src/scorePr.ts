@@ -1,6 +1,6 @@
 import * as core from '@actions/core'
 
-import {FilesCoverage} from './coverage'
+import {AverageCoverage, FilesCoverage} from './coverage'
 import {formatAverageTable, formatFilesTable, toPercent} from './format'
 import {context} from '@actions/github'
 import {octokit} from './client'
@@ -37,7 +37,7 @@ export async function publishMessage(pr: number, message: string): Promise<void>
   }
 }
 
-export async function publishGithubCheck(pr: number, message: string, passOverall: boolean): Promise<void> {
+export async function publishGithubCheck(message: string, passOverall: boolean, cover: AverageCoverage): Promise<void> {
   const head_sha = context.payload.pull_request?.head.sha
   if (!head_sha) {
     core.error('No head SHA found. Cannot create a check.')
@@ -60,8 +60,8 @@ export async function publishGithubCheck(pr: number, message: string, passOveral
     conclusion,
 
     output: {
-      title: TITLE,
-      summary: passOverall ? 'Coverage passed' : 'Coverage failed',
+      title: passOverall ? 'Coverage passed' : 'Coverage failed',
+      summary: `Coverage ${cover.covered} / ${toPercent(cover.threshold)}`,
       text: message
     }
   })
@@ -108,7 +108,7 @@ export function scorePr(filesCover: FilesCoverage, publishType: PublishType): bo
       publishMessage(context.issue.number, message)
       break
     case 'check':
-      publishGithubCheck(context.issue.number, message, passOverall)
+      publishGithubCheck(message, passOverall, filesCover.averageCover)
       break
   }
   core.endGroup()
