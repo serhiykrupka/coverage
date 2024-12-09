@@ -5,7 +5,9 @@ import {formatAverageTable, formatFilesTable, toPercent} from './format'
 import {context} from '@actions/github'
 import {octokit} from './client'
 
-const TITLE = `# ☂️ Python Coverage`
+const TITLE = `☂️ Python Coverage`
+
+export type PublishType = 'github-check' | 'github-comment'
 
 export async function publishMessage(pr: number, message: string): Promise<void> {
   const body = TITLE.concat(message)
@@ -35,7 +37,34 @@ export async function publishMessage(pr: number, message: string): Promise<void>
   }
 }
 
-export function scorePr(filesCover: FilesCoverage): boolean {
+export async function publishGithubCheck(pr: number, message: string, passOverall: boolean): Promise<void> {
+  const head_sha = context.payload.pull_request?.head.sha
+  if (!head_sha) {
+    core.error('No head SHA found. Cannot create a check.')
+    return
+  }
+
+  // Set conclusion based on whether coverage passed or not
+  const conclusion = passOverall ? 'success' : 'failure'
+
+  // Create or update a check run
+  // You can choose to first list existing checks and update if found, but typically you can just create a new one.
+  await octokit.rest.checks.create({
+    owner: context.repo.owner,
+    repo: context.repo.repo,
+    name: TITLE,
+    head_sha,
+    status: 'completed',
+    conclusion,
+
+    output: {
+      title: TITLE,
+      text: message
+    }
+  })
+}
+
+export function scorePr(filesCover: FilesCoverage, publishType: PublishType = 'github-check'): boolean {
   let message = ''
   let passOverall = true
 
@@ -69,7 +98,15 @@ export function scorePr(filesCover: FilesCoverage): boolean {
   const action = '[action](https://github.com/marketplace/actions/python-coverage)'
   message = message.concat(`\n\n\n> **updated for commit: \`${sha}\` by ${action}🐍**`)
   message = `\n> current status: ${passOverall ? '✅' : '❌'}`.concat(message)
-  publishMessage(context.issue.number, message)
+
+  switch (publishType) {
+    case 'github-comment':
+      publishMessage(context.issue.number, message)
+      break
+    case 'github-check':
+      publishGithubCheck(context.issue.number, message, passOverall)
+      break
+  }
   core.endGroup()
 
   return passOverall
