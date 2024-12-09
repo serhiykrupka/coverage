@@ -69,6 +69,7 @@ export async function publishGithubCheck(pr: number, message: string, passOveral
 export function scorePr(filesCover: FilesCoverage, publishType: PublishType = 'github-check'): boolean {
   let message = ''
   let passOverall = true
+  core.info(`Publishing results as ${publishType}...`)
 
   core.startGroup('Results')
   const {coverTable: avgCoverTable, pass: passTotal} = formatAverageTable(filesCover.averageCover)
@@ -101,7 +102,6 @@ export function scorePr(filesCover: FilesCoverage, publishType: PublishType = 'g
   message = message.concat(`\n\n\n> **updated for commit: \`${sha}\` by ${action}🐍**`)
   message = `\n> current status: ${passOverall ? '✅' : '❌'}`.concat(message)
 
-  core.info(`Publishing results as ${publishType}...`)
   switch (publishType) {
     case 'github-comment':
       publishMessage(context.issue.number, message)
