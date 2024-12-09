@@ -49,6 +49,8 @@ export async function publishGithubCheck(pr: number, message: string, passOveral
 
   // Create or update a check run
   // You can choose to first list existing checks and update if found, but typically you can just create a new one.
+  core.info('Publishing Github check...')
+
   await octokit.rest.checks.create({
     owner: context.repo.owner,
     repo: context.repo.repo,

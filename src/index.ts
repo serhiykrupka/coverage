@@ -25,7 +25,7 @@ async function run(): Promise<void> {
 
     const report = readFile(coverageFile)
     const filesCoverage = parseCoverageReport(report, files)
-    const passOverall = scorePr(filesCoverage)
+    const passOverall = scorePr(filesCoverage, 'github-check')
 
     if (!passOverall) {
       core.setFailed('Coverage is lower than configured threshold 😭')
