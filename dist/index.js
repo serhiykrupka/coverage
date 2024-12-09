@@ -460,6 +460,7 @@ function publishGithubCheck(pr, message, passOverall) {
             conclusion,
             output: {
                 title: TITLE,
+                summary: passOverall ? 'Coverage passed' : 'Coverage failed',
                 text: message
             }
         });
