@@ -317,7 +317,7 @@ function run() {
             core.info(`git new files: ${JSON.stringify(files.newFiles)} modified files: ${JSON.stringify(files.modifiedFiles)}`);
             const report = (0, readFile_1.default)(coverageFile);
             const filesCoverage = (0, coverage_1.parseCoverageReport)(report, files);
-            const passOverall = (0, scorePr_1.scorePr)(filesCoverage);
+            const passOverall = (0, scorePr_1.scorePr)(filesCoverage, 'github-check');
             if (!passOverall) {
                 core.setFailed('Coverage is lower than configured threshold 😭');
             }
@@ -414,12 +414,12 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.scorePr = exports.publishMessage = void 0;
+exports.scorePr = exports.publishGithubCheck = exports.publishMessage = void 0;
 const core = __importStar(__nccwpck_require__(2186));
 const format_1 = __nccwpck_require__(6610);
 const github_1 = __nccwpck_require__(5438);
 const client_1 = __nccwpck_require__(1565);
-const TITLE = `# ☂️ Python Coverage`;
+const TITLE = `☂️ Python Coverage`;
 function publishMessage(pr, message) {
     return __awaiter(this, void 0, void 0, function* () {
         const body = TITLE.concat(message);
@@ -438,10 +438,39 @@ function publishMessage(pr, message) {
     });
 }
 exports.publishMessage = publishMessage;
-function scorePr(filesCover) {
+function publishGithubCheck(pr, message, passOverall) {
+    var _a;
+    return __awaiter(this, void 0, void 0, function* () {
+        const head_sha = (_a = github_1.context.payload.pull_request) === null || _a === void 0 ? void 0 : _a.head.sha;
+        if (!head_sha) {
+            core.error('No head SHA found. Cannot create a check.');
+            return;
+        }
+        // Set conclusion based on whether coverage passed or not
+        const conclusion = passOverall ? 'success' : 'failure';
+        // Create or update a check run
+        // You can choose to first list existing checks and update if found, but typically you can just create a new one.
+        core.info('Publishing Github check...');
+        yield client_1.octokit.rest.checks.create({
+            owner: github_1.context.repo.owner,
+            repo: github_1.context.repo.repo,
+            name: TITLE,
+            head_sha,
+            status: 'completed',
+            conclusion,
+            output: {
+                title: TITLE,
+                text: message
+            }
+        });
+    });
+}
+exports.publishGithubCheck = publishGithubCheck;
+function scorePr(filesCover, publishType = 'github-check') {
     var _a, _b, _c;
     let message = '';
     let passOverall = true;
+    core.info(`Publishing results as ${publishType}...`);
     core.startGroup('Results');
     const { coverTable: avgCoverTable, pass: passTotal } = (0, format_1.formatAverageTable)(filesCover.averageCover);
     message = message.concat(`\n## Overall Coverage\n${avgCoverTable}`);
@@ -472,7 +501,14 @@ function scorePr(filesCover) {
     const action = '[action](https://github.com/marketplace/actions/python-coverage)';
     message = message.concat(`\n\n\n> **updated for commit: \`${sha}\` by ${action}🐍**`);
     message = `\n> current status: ${passOverall ? '✅' : '❌'}`.concat(message);
-    publishMessage(github_1.context.issue.number, message);
+    switch (publishType) {
+        case 'github-comment':
+            publishMessage(github_1.context.issue.number, message);
+            break;
+        case 'github-check':
+            publishGithubCheck(github_1.context.issue.number, message, passOverall);
+            break;
+    }
     core.endGroup();
     return passOverall;
 }
