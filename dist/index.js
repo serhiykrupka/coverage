@@ -317,8 +317,9 @@ function run() {
             core.info(`git new files: ${JSON.stringify(files.newFiles)} modified files: ${JSON.stringify(files.modifiedFiles)}`);
             const report = (0, readFile_1.default)(coverageFile);
             const filesCoverage = (0, coverage_1.parseCoverageReport)(report, files);
-            const passOverall = (0, scorePr_1.scorePr)(filesCoverage, 'github-check');
-            if (!passOverall) {
+            const publType = getPublishType();
+            const passOverall = (0, scorePr_1.scorePr)(filesCoverage, publType);
+            if (!passOverall && publType === 'comment') {
                 core.setFailed('Coverage is lower than configured threshold 😭');
             }
         }
@@ -327,6 +328,13 @@ function run() {
             core.setFailed(message);
         }
     });
+}
+function getPublishType() {
+    const publType = core.getInput('publishType');
+    if (publType === 'check' || publType === 'comment') {
+        return publType;
+    }
+    throw new Error(`Invalid publish type: '${publType}'. Valid options are: 'check', 'comment'.`);
 }
 run();
 
@@ -422,7 +430,7 @@ const client_1 = __nccwpck_require__(1565);
 const TITLE = `☂️ Python Coverage`;
 function publishMessage(pr, message) {
     return __awaiter(this, void 0, void 0, function* () {
-        const body = TITLE.concat(message);
+        const body = `#${TITLE.concat(message)}`;
         core.summary.addRaw(body).write();
         const comments = yield client_1.octokit.rest.issues.listComments(Object.assign(Object.assign({}, github_1.context.repo), { issue_number: pr }));
         const exist = comments.data.find(commnet => {
@@ -467,7 +475,7 @@ function publishGithubCheck(pr, message, passOverall) {
     });
 }
 exports.publishGithubCheck = publishGithubCheck;
-function scorePr(filesCover, publishType = 'github-check') {
+function scorePr(filesCover, publishType) {
     var _a, _b, _c;
     let message = '';
     let passOverall = true;
@@ -503,10 +511,10 @@ function scorePr(filesCover, publishType = 'github-check') {
     message = message.concat(`\n\n\n> **updated for commit: \`${sha}\` by ${action}🐍**`);
     message = `\n> current status: ${passOverall ? '✅' : '❌'}`.concat(message);
     switch (publishType) {
-        case 'github-comment':
+        case 'comment':
             publishMessage(github_1.context.issue.number, message);
             break;
-        case 'github-check':
+        case 'check':
             publishGithubCheck(github_1.context.issue.number, message, passOverall);
             break;
     }

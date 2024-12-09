@@ -2,7 +2,7 @@ import * as core from '@actions/core'
 import {context} from '@actions/github'
 import {parseCoverageReport} from './coverage'
 import {compareCommits} from './compareCommits'
-import {scorePr} from './scorePr'
+import {PublishType, scorePr} from './scorePr'
 import readFile from './readFile'
 
 async function run(): Promise<void> {
@@ -25,15 +25,26 @@ async function run(): Promise<void> {
 
     const report = readFile(coverageFile)
     const filesCoverage = parseCoverageReport(report, files)
-    const passOverall = scorePr(filesCoverage, 'github-check')
+    const publType: PublishType = getPublishType()
+    const passOverall = scorePr(filesCoverage, publType)
 
-    if (!passOverall) {
+    if (!passOverall && publType === 'comment') {
       core.setFailed('Coverage is lower than configured threshold 😭')
     }
   } catch (error) {
     const message = JSON.stringify(error instanceof Error ? error.message : error)
     core.setFailed(message)
   }
+}
+
+function getPublishType(): PublishType {
+  const publType: string = core.getInput('publishType')
+
+  if (publType === 'check' || publType === 'comment') {
+    return publType as PublishType
+  }
+
+  throw new Error(`Invalid publish type: '${publType}'. Valid options are: 'check', 'comment'.`)
 }
 
 run()

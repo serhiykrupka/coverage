@@ -7,10 +7,10 @@ import {octokit} from './client'
 
 const TITLE = `☂️ Python Coverage`
 
-export type PublishType = 'github-check' | 'github-comment'
+export type PublishType = 'check' | 'comment'
 
 export async function publishMessage(pr: number, message: string): Promise<void> {
-  const body = TITLE.concat(message)
+  const body = `#${TITLE.concat(message)}`
   core.summary.addRaw(body).write()
 
   const comments = await octokit.rest.issues.listComments({
@@ -67,7 +67,7 @@ export async function publishGithubCheck(pr: number, message: string, passOveral
   })
 }
 
-export function scorePr(filesCover: FilesCoverage, publishType: PublishType = 'github-check'): boolean {
+export function scorePr(filesCover: FilesCoverage, publishType: PublishType): boolean {
   let message = ''
   let passOverall = true
   core.info(`Publishing results as ${publishType}...`)
@@ -104,10 +104,10 @@ export function scorePr(filesCover: FilesCoverage, publishType: PublishType = 'g
   message = `\n> current status: ${passOverall ? '✅' : '❌'}`.concat(message)
 
   switch (publishType) {
-    case 'github-comment':
+    case 'comment':
       publishMessage(context.issue.number, message)
       break
-    case 'github-check':
+    case 'check':
       publishGithubCheck(context.issue.number, message, passOverall)
       break
   }

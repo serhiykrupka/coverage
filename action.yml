@@ -23,6 +23,9 @@ inputs:
   sourceDir:
     required: false
     description: the directory to use as the source of the coverage report
+  publishType:
+    description: Publish as comment or GitHub Check
+    default: comment
 runs:
   using: 'node20'
   main: 'dist/index.js'
