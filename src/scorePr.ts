@@ -61,6 +61,7 @@ export async function publishGithubCheck(pr: number, message: string, passOveral
 
     output: {
       title: TITLE,
+      summary: passOverall ? 'Coverage passed' : 'Coverage failed',
       text: message
     }
   })
