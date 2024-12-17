@@ -446,7 +446,7 @@ function publishMessage(pr, message) {
     });
 }
 exports.publishMessage = publishMessage;
-function publishGithubCheck(pr, message, passOverall) {
+function publishGithubCheck(message, passOverall, cover, title) {
     var _a;
     return __awaiter(this, void 0, void 0, function* () {
         const head_sha = (_a = github_1.context.payload.pull_request) === null || _a === void 0 ? void 0 : _a.head.sha;
@@ -454,21 +454,18 @@ function publishGithubCheck(pr, message, passOverall) {
             core.error('No head SHA found. Cannot create a check.');
             return;
         }
-        // Set conclusion based on whether coverage passed or not
         const conclusion = passOverall ? 'success' : 'failure';
-        // Create or update a check run
-        // You can choose to first list existing checks and update if found, but typically you can just create a new one.
         core.info('Publishing Github check...');
         yield client_1.octokit.rest.checks.create({
             owner: github_1.context.repo.owner,
             repo: github_1.context.repo.repo,
-            name: TITLE,
+            name: title,
             head_sha,
             status: 'completed',
             conclusion,
             output: {
-                title: TITLE,
-                summary: passOverall ? 'Coverage passed' : 'Coverage failed',
+                title: passOverall ? 'Coverage passed' : 'Coverage failed',
+                summary: `Coverage ${cover.covered} / ${(0, format_1.toPercent)(cover.threshold)}`,
                 text: message
             }
         });
@@ -515,7 +512,7 @@ function scorePr(filesCover, publishType) {
             publishMessage(github_1.context.issue.number, message);
             break;
         case 'check':
-            publishGithubCheck(github_1.context.issue.number, message, passOverall);
+            publishGithubCheck(message, passOverall, filesCover.averageCover, core.getInput('title') || TITLE);
             break;
     }
     core.endGroup();

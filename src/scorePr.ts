@@ -37,24 +37,26 @@ export async function publishMessage(pr: number, message: string): Promise<void>
   }
 }
 
-export async function publishGithubCheck(message: string, passOverall: boolean, cover: AverageCoverage): Promise<void> {
+export async function publishGithubCheck(
+  message: string,
+  passOverall: boolean,
+  cover: AverageCoverage,
+  title: string
+): Promise<void> {
   const head_sha = context.payload.pull_request?.head.sha
   if (!head_sha) {
     core.error('No head SHA found. Cannot create a check.')
     return
   }
 
-  // Set conclusion based on whether coverage passed or not
   const conclusion = passOverall ? 'success' : 'failure'
 
-  // Create or update a check run
-  // You can choose to first list existing checks and update if found, but typically you can just create a new one.
   core.info('Publishing Github check...')
 
   await octokit.rest.checks.create({
     owner: context.repo.owner,
     repo: context.repo.repo,
-    name: TITLE,
+    name: title,
     head_sha,
     status: 'completed',
     conclusion,
@@ -108,7 +110,7 @@ export function scorePr(filesCover: FilesCoverage, publishType: PublishType): bo
       publishMessage(context.issue.number, message)
       break
     case 'check':
-      publishGithubCheck(message, passOverall, filesCover.averageCover)
+      publishGithubCheck(message, passOverall, filesCover.averageCover, core.getInput('title') || TITLE)
       break
   }
   core.endGroup()

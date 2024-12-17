@@ -26,6 +26,10 @@ inputs:
   publishType:
     description: Publish as comment or GitHub Check
     default: comment
+  title:
+    description: Title of the comment or check
+    default: "☂️ Python Coverage"
+    required: false
 runs:
   using: 'node20'
   main: 'dist/index.js'
